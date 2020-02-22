@@ -1,0 +1,2036 @@
+---
+title: "NYC311 Dataset Analytics"
+author: 'David_Mwasikira'
+date: "2/14/2020"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+#Global settings
+knitr::opts_chunk$set(
+                  echo = FALSE,
+                  eval = TRUE, 
+                  message=FALSE, 
+                  warning=FALSE, 
+                  error = TRUE,
+                  collapse= TRUE)
+
+library(knitr)        
+library(kableExtra)   
+
+```
+
+
+## Project Title: NYC311 Preliminary Data Exploration & Analysis
+
+ * Course Title: Master of Science - Data Analytics
+ * RIT Dubai University
+ * Professor: Mike McQuaid
+
+
+```{r echo=FALSE}
+# This chunk is just to make it possible to shrink the typeface in succeeding chunks. 
+# Mainly this will be used for the crosstabs.
+def.chunk.hook  <- knitr::knit_hooks$get("chunk")
+knitr::knit_hooks$set(chunk = function(x, options) {
+  x <- def.chunk.hook(x, options)
+  ifelse(options$size != "normalsize", paste0("\\", options$size,"\n\n", x, "\n\n \\normalsize"), x)
+})
+```
+
+## 1. Introduction
+
+The NYC311 is the nation’s largest and most comprehensive 311 service in operation that deals with non-emergency cases within the jurisdiction of New York City. The data collected through this service is available as is to the public for viewing and analysis.
+
+The NYC311 data being in its raw state poses several challenges for any immediate analysis and therefore requires some treatment or conditioning to make it more friendlier for analytical tools. We therefore pass this data through a series of steps in what is known as data wrangling before we start extracting some insights from it.
+
+Data wrangling refers to the process of cleaning, restructuring and enriching the raw data available into a more usable format. Organizing and cleaning data before analysis has been shown to be extremely useful and helps in sppeding up the  analysis of larger amounts of data.
+
+
+
+We will approach the data with the following steps:
+
+  *1.  Discovering:* Performing preliminary checks using str, colnames, nrow commands
+  
+  *2.  Structuring:* Restructuring data in a way that suits the analytical methods like splitting columns, dropping unwanted columns, etc
+  
+  *3.  Cleaning:*   All datasets are sure to have some outliers, which can skew the results of the analysis. Null values will have to be changed, and the formatting will be standardized in order to make the data of higher quality.
+  
+  *4.  Enriching:*  Augmenting the dataset using some additional data in order to make it better.
+  
+  *5.  Validating:* Validation rules refer to some repetitive programming steps which are used to verify the consistency and quality of the data you have to ascertain whether the fields in the data set are accurate via a check across the data
+  
+  *6.  Data Analysis:* Preparing Plots, Charts, tables and other analysis to discover trends or insights in the data
+  
+  *7.  Reporting:*  The story telling part in a way that is truthful, impactful and beneficial.
+
+
+
+## 2. Context
+
+New York City, the most populous metropolitan area in the United States, is home to over 8.3 million residents. To serve this massive and diverse population the City operates the nation’s largest and most complex municipal government with more than 350,000 city employees and 120 agencies, offices and organizations offering over 4,000 different services to residents.
+
+**What NYC311 Service Delivers**
+
+The NYC311 is a call center service in New York city that provides you access to non-emergency City services and information about City government programs. NYC311 can help with a broad range of services, including things like homeless person assistance, pothole repair, or help understanding a property tax bill.
+
+Residents of NewYork use the NYC311 App to log in complaints in a central database with enough details of location and nature of problem which are then picked up at the call centre and routed to relevant resolving departments. Once issue has been resolved, it is then logged as resolved and closed in the system.
+
+
+A quick representation of information flow would look as depicted below:
+
+![The NYC311 Call Centre Process](PngItem_3509909.png)
+
+
+Complaints received from residents through the NYC311 App service, online, text and other means are assigned to speciality departments for resolution.
+
+
+First of all we will give a preliminary description of the dataset by reading the data then describe it in a way to define the dataset structure, data dictionary including all described pictures and tables required.
+
+
+Further in this project we will deep dive into the data in order to explore insights and answer the business questions through the data analytics process. 
+
+ 
+We will attempt to answer questions on the data that are designed to open up insights, which can possibly lead to further information discovery. Links and correlations on data features shall be explored as given here:
+
+  - Connection between columns ( Correlation; what, which, when, where )
+  - Raise business Questions & Answers
+  
+  
+**Questions We Raise**  
+
+  1.	What are the Statistics in regard to NYC311 dataset?
+        a.	Aggregate Complaints Calls by Dates (including year, month and day), Agency, County 
+        b.	What types of complaints are dominant and how do they vary from region to region?
+        c.  What is the total number of calls a department handles per month?
+        d.  Which region generates the highest number of calls and of which type?
+        d.  What is the association between Complaints and Boroughs?
+        
+  2.	What is the seasonality, trends of the complaints over time, and which type of complaint?
+  
+  3.	How do the agencies fare in dealing with complaints? Are there signs of being overwhelmed? If yes at what times?
+        a. What is the average time it takes to handle each category of task?
+        
+  5.	How could these data be made useful and benefit the agencies in improving their performance?  
+  
+
+
+
+
+## 3. About The Data
+
+### 3.1 The NewYork City 311 (NYC311) Dataset
+
+
+
+**NYC311 Dataset Overview**
+
+*Data Description*
+
+
+The dataset was downloaded from a source provided 
+by [Khalil Darwish](https://drive.google.com/drive/folders/1c8JvmiUdn7B_ftqk8eQ0R5bRRfqrqaJW?usp=sharing)
+
+The following steps are used in the process of data discovery and data cleaning for the new dataset as well.
+  
+  i.  Loading New Dataset
+  ii. Loading New Dataset
+  iii.Data Discovery - checking summaries and counts
+  iv. Removing duplicates
+  v.  Data Cleaning
+  
+
+**Setting up The Workspace Environment**
+
+  - We are using the R language and RStudio Cloud the IDE for all our analysis. Link is https://rstudio.cloud/project/917416
+  - However there is a 3 GB limitation on storage space, so we trimmed our dataset to a smaller set of 100,000 rows each.
+  - We thereafter run the complete dataset on our laptops.
+  
+
+*Loading Required Packages*
+
+The following packages are used in this project:
+
+  - Tidyverse: This is a package of packages which include ggplot2, dplyr, tidyr, readr, stringr, tibble, forcats, purrr, lubridate, magrittr among others. The purpose of tidyverse is to provide key data transformation functions in a single package, and moreover the packages work in harmony to clean, process, model, and visualize data.
+  
+  - Data.Table: It is widely used for fast aggregation of large datasets, low latency add/update/remove of columns, quicker ordered joins, and a fast file reader.  It is an ideal package for dataset handing in R.
+  
+  - DT Package: For rendering Tables
+  
+  - Hmisc: Hmisc is a multiple purpose package useful for data analysis, high – level graphics, imputing missing values, advanced table making, model fitting & diagnostics (linear regression, logistic regression & cox regression) etc.
+  - xtable:
+  
+  - Leaflet: For rendering maps
+  
+  - Corrplot Package: For Cross Tabulation
+  
+  - Lubridate: For converting Dates from other formats to POSIXct and POSIXlt formats
+  
+
+```{r initialize, message=FALSE}
+
+# Load the packages into R
+library(plyr)
+library(tidyverse, warn.conflicts = FALSE)
+library(data.table, warn.conflicts = FALSE)
+library(DT)
+library(Hmisc)
+library(xtable)
+library(leaflet)
+library(corrplot)
+library(ggmap)
+
+#library(rworldmap)
+```
+
+
+
+*Loading The NYC311 Dataset*
+
+```{r raw_data1, message=FALSE}
+
+if (!require(data.table)) {
+  install.packages("data.table",dependencies=TRUE)
+  library(data.table)
+}
+
+nyc311<-fread("311_Service_Requests_from_2010_to_Present.csv")
+#nyc311<-fread("nyc311_sample.csv")
+names(nyc311)<-names(nyc311) %>%
+  stringr::str_replace_all("\\s", ".")
+```
+
+
+
+The NYC311 2010 to 2014 dataset originally has:
+
+  - Number of Rows      
+```{r}
+nrow(nyc311)
+```
+  - Number of Columns   
+```{r}
+ncol(nyc311)
+```
+
+
+
+```{r chart-colors, echo=FALSE}
+#Creating Color Variables for use in Plot Fills
+fillColor1 = "#0080FF"
+fillColor2 = "#00FFFF"
+fillColor3 = "#81C0FF"
+fillColor4 = "#00FF00"
+fillColor5 = "#FF00FF"
+```
+
+
+
+**Step 1: Data Discovery Preliminary Data Inspection**
+
+
+*Dataset Features: The 52 Columns of the NYC311 Data*
+
+```{r column_in_data1}
+colnames(nyc311)
+```
+
+
+
+
+```{r view-1, eval=FALSE}
+#A Table of Preview of The Original NYC311 Dataset
+library(devtools)
+library(pander)
+
+#pander(head(cleaned_nyc311))
+
+landscape(knitr::kable(nyc311[1:6, 1:52], caption = "Original NYC311 Data Display") %>%
+  kable_styling(latex_options = c("striped", 
+                                  "hover", 
+                                  "responsive"),
+                                   full_width = T, 
+                                   font_size = 7) %>%
+                column_spec(2,width="6in"))
+
+```
+
+
+
+
+A preliminary look into the data shows we have 9.4 millions rows and 52 columns. The first characteristics we note with our dataset are listed as follows;
+  
+  - The NYC311 dataset is a dataframe. 
+  - We also have empty columns in our dataset.
+  - All columns data are in char format except latitude and longitude
+
+
+  
+  
+**Step 2-4: Data Structuring, Cleaning and Enriching to Improve Dataset**
+
+
+```{r sample1, message=FALSE,warning=FALSE}
+#Creating a Sample SubDataset for testing with 10,000 rows (records)
+
+nyc311_sample<-nyc311[sample(nrow(nyc311),10000),]
+```
+
+The NYC311 Dataset is over 9 Million in rows and over 4 GB in size. To be able to easily explore the data, we create a small sample of a 10,000 rows of the original where we can do the testing.
+
+
+We are now set to use the Data Wrangling steps in preparing the data for analysis. The steps here are iterative in nature and sometimes are performed together for clarity. 
+
+
+
+
+**Step 1. Data Discovery: Initial Checks for data structure, Duplicates**
+  
+  
+  Checked for how many unique values there are for each column
+
+```{r message=FALSE,warning=FALSE, eval=FALSE, results="hide"}
+kable(sapply(nyc311,function(x) length(unique(x))))
+
+```  
+  
+  
+
+**Step 2. Structuring The Data: Dropping of unnecessary columns, Renaming Columns**
+  
+
+*Removing Columns with no data using various methods as outlined below:*
+    
+  - select and contain "School" and "Facility" keywords
+  - use of rm keyword to remove "City, Landmark and Location" columns
+  - use of contain statement
+
+
+```{r data_cleaning1, message=FALSE,warning=FALSE}
+
+my_data<- nyc311
+data1 <-within(my_data, rm(City, 
+                           Landmark, 
+                           Location, 
+                           Agency.Name, 
+                           Community.Board, 
+                           Park.Borough, 
+                           Street.Name, 
+                           Cross.Street.1, 
+                           Cross.Street.2, 
+                           Intersection.Street.2, 
+                           "X.Coordinate.(State.Plane)",	
+                           "Y.Coordinate.(State.Plane)"))
+df1 <- data1 %>% select(-starts_with("School"))
+df2 <- df1 %>% select(-c(Vehicle.Type:Ferry.Terminal.Name))
+trimmed_nyc311 <- df2 %>% select(-contains("Facility"))
+
+rm(my_data, data1, df1, df2)
+
+```
+
+The trimmed dataset showing the first few rows.
+
+```{r trimmed-data, results="hide"}
+library(devtools)
+library(pander)
+
+#pander(head(trimmed_nyc311))
+
+landscape(knitr::kable(trimmed_nyc311[1:10, 1:18], caption = "Trimmed NYC311 Dataset Display") %>%
+  kable_styling(latex_options = c("striped", 
+                                  "hover", 
+                                  "responsive"),
+                                   full_width = T, 
+                                   font_size = 7) %>%
+                column_spec(2,width="6in"))
+
+```
+
+
+
+```{r nyc-total_NAs, message=FALSE,warning=FALSE, results="hide", eval=FALSE}
+#Column Names for the Dataset
+
+colSums(is.na(trimmed_nyc311))
+```  
+
+*Checking and Removing Rows with high number of NAs*
+
+```{r nyc-na-checks, message=FALSE,warning=FALSE, results="hide"}
+colnames(trimmed_nyc311)[colnames(trimmed_nyc311) == 'Resolution.Action.Updated.Date'] <- 'Closeout.Date'
+sum(!is.na(trimmed_nyc311$Created.Date))
+```
+
+```{r nyc-column-names}
+colnames(trimmed_nyc311)
+
+```
+  
+
+
+**Step 3. Data Cleaning, Enriching and validation: Processing data in selected columns**  
+  
+  
+  *3.1. Cleaning up the Boroughs Column and Removing the "Unspecified" Column*
+
+  The Boroughs Column has many values indicating as "Unspecified". We shall try to improve this column below.
+
+```{r}
+tapply(trimmed_nyc311$Borough,trimmed_nyc311$Borough,length)
+```
+
+
+```{r results="hide"}
+df1_Bor <- trimmed_nyc311 %>% 
+                      select(Unique.Key, 
+                             Created.Date, 
+                             Closed.Date, 
+                             Agency, 
+                             Complaint.Type, 
+                             Incident.Zip, 
+                             Borough, 
+                             Status, 
+                             Closeout.Date, 
+                             Latitude, 
+                             Longitude)
+
+#head(df1_Bor, 20)
+
+landscape(knitr::kable(df1_Bor[1:10, 1:11], caption = "Data Before Cleaning") %>%
+  kable_styling(latex_options = c("striped", 
+                                  "hover", 
+                                  "responsive"),
+                                   full_width = T, 
+                                   font_size = 7) %>%
+                column_spec(2,width="6in"))
+
+```
+
+
+
+*3.2. Select only data with Unspecified Values*
+
+```{r}
+# Remove null  & NA values
+df1_Boroughs <- df1_Bor[!is.na(df1_Bor$Incident.Zip) & df1_Bor$Incident.Zip !="" &df1_Bor$Borough=="Unspecified"]              
+#head(df1_Boroughs)
+#nrow(df1_Boroughs)
+```
+
+
+
+*3.3. Using the ZipCode dataset to replace matching Borough values.*
+
+```{r nycZipCode_data}
+#Load ZipCode Data
+
+nycZipCodes <- fread("zipbyboro.csv")
+
+knitr::kable(head(nycZipCodes)) %>%
+  kable_styling(latex_options = c("striped", 
+                                  "hover", 
+                                  "responsive"),
+                                   full_width = T, 
+                                   font_size = 11)
+```
+
+
+
+
+
+```{r}
+#Matching ZipCodes from both datasets
+zipValue <- match(df1_Boroughs$Incident.Zip,nycZipCodes$zip, nomatch = 0)
+
+```
+
+
+```{r}
+df1_Boroughs$Borough[zipValue !=0] <- nycZipCodes$borough[zipValue]
+```
+
+
+
+```{r}
+#Changing the Initial Dataset to correct unavailable values with real Boroughs Names
+# Requires library(plyr)
+
+zipValue <- match(trimmed_nyc311$Unique.Key, df1_Boroughs$Unique.Key, nomatch = 0)
+trimmed_nyc311$Borough[zipValue !=0] <- df1_Boroughs$Borough[zipValue]
+
+BoroughSummarytotal <- ddply(df1_Boroughs, c( "Borough"), summarise, N = length(Borough))
+
+```
+
+
+
+*3.4. Results after matching Zipcodes in both datasets*
+
+```{r}
+tapply(trimmed_nyc311$Borough,trimmed_nyc311$Borough,length)
+```
+
+    >Observation: The "Unspecified" values in the Borough Column are now reduced substatialy.
+    
+
+```{r eval= FALSE, results="hide"}
+describe(trimmed_nyc311$Borough)
+```
+
+ 
+ 
+  
+*3.5. Checking For Duplicate Rows "AFTER" dropping the "Unique.Key" ID using DISTINCT Keyword*
+
+
+*Note:* There are very few duplicate rows when inspected with the "Unique.Key" column, but after dropping the Unique.Key column, we now realized we had over a million duplicates.We shall therefore based our analysis from hence on the "nyc311nodups" column.
+
+
+```{r nyc_no_dups1, results="hide"}
+if (!require(dplyr)) {
+install.packages("dplyr",dependencies=TRUE)
+library(dplyr)
+}
+nyc311nodups<-distinct(trimmed_nyc311)
+all_equal(nyc311nodups,trimmed_nyc311)
+
+nrow(trimmed_nyc311)
+nrow(nyc311nodups)
+
+
+#rm(trimmed_nyc311)
+#gc()
+```
+
+
+
+**Step 4. Data Analysis & Reporting**
+
+
+
+*Visualization BEFORE AND AFTER Borough Column Improvement*
+
+- Call Distribution by Borough
+
+      
+```{r nyc311Plot_2A, message=FALSE,warning=FALSE}
+
+nyc311 %>%
+    dplyr::group_by(Borough) %>%
+    filter(!is.na(Borough)) %>%
+    dplyr::summarise(Count = dplyr::n()) %>%
+    ungroup() %>%
+    mutate(Borough = reorder(Borough,Count)) %>%
+    arrange(desc(Count)) %>%
+    head(10) %>%
+  
+    ggplot(aes(x = Borough,y = Count)) +
+    geom_bar(stat='identity',
+             colour="white", 
+             fill = fillColor3) +
+    geom_text(aes(x = Borough, 
+                  y = 1, 
+                  label = paste0("(",Count,")",
+                                 sep="")),
+            hjust=0.5, vjust=-2.5, size = 4, colour = 'black',
+            fontface = 'bold') +
+  labs(x = 'Borough', 
+       y = 'Count', 
+       title = 'Number of Complaints By Borough"before Borough Col improved') +
+  theme_bw()
+
+```
+
+
+
+  - *Call Distribution by County (After Boroughs Col Improvement)*
+
+```{r nyc311Plot_2B, message=FALSE,warning=FALSE}
+
+nyc311nodups %>%
+    dplyr::group_by(Borough) %>%
+    filter(!is.na(Borough)) %>%
+    dplyr::summarise(Count = dplyr::n()) %>%
+    ungroup() %>%
+    mutate(Borough = reorder(Borough,Count)) %>%
+    arrange(desc(Count)) %>%
+    head(10) %>%
+  
+    ggplot(aes(x = Borough,y = Count)) +
+    geom_bar(stat='identity',
+             colour="white", 
+             fill = fillColor4) +
+    geom_text(aes(x = Borough, 
+                  y = 1, 
+                  label = paste0("(",Count,")",
+                                 sep="")),
+            hjust=0.5, vjust=-2.5, size = 4, colour = 'black',
+            fontface = 'bold') +
+  labs(x = 'Borough', 
+       y = 'Count', 
+       title = 'Number of Complaints By Borough "after borough col improved"') +
+  theme_bw()
+
+```
+
+  >Observation shows that The Unspecified values under Boroughs reduced in number from 1,059,265 to 238,883 overall. A reduction factor of over 4 times.
+
+
+```{r}
+rm(nyc311)
+```
+
+
+
+
+**Processing Dates.**
+
+Inorder to perform date calculations such as getting getting the total count of all complaints created in a year, month or week, we need to perform some data transformation on the Date columns. The raw data is in character format which does not support any date calculations. The lubridate package helps us do the automatic conversions to calendar and local time formats.
+
+
+
+Upon inspection, the following issues were noted;
+
+  1. Dates in char format; To be converted to Date format
+  2. Given dates are in the 12 Hour %m/%d/%Y %H:%M:%S %p format; To be converted to POSIXct format
+  3. There were missing dates, others without the AM or PM notation
+  4. There were outliers such as 01/01/1900 and 12/31/2037 in the system
+  
+
+Here are the steps taken in resolving the mentioned data issues.  
+  
+**Step 1: Selecting and Setting Date Range to remove Outliers; Dates before year 2010**
+
+  We have seen from our plot above, we have dates as far bar as 1900. The following date range confirms this.
+
+
+*Date Ranges for "Created.Date" Column*
+```{r nyc_period_range1, echo= TRUE, message=FALSE,warning=FALSE}
+#Range of Dates MinMax in Dataset
+range(nyc311nodups$Created.Date, na.rm = TRUE)
+```
+
+
+*Date Ranges for "Closed.Date" Column*
+```{r nyc_period_range2, echo= TRUE, message=FALSE,warning=FALSE}
+#Range of Dates MinMax in Dataset
+range(nyc311nodups$Closed.Date, na.rm = TRUE)
+```
+
+
+*Date Ranges for "Closeout.Date" Column*
+```{r nyc_period_range3, echo= TRUE, message=FALSE,warning=FALSE}
+#Range of Dates MinMax in Dataset
+range(nyc311nodups$Closeout.Date, na.rm = TRUE)
+```
+
+
+
+  > **NOTE:** We shall have to intially drop these values before 2010 start date and any date after December 2015.
+
+
+
+**Steps 2: Dropping Date Columns without the AM or PM notation**
+
+
+```{r nyc_regEx_filter_dates, message=FALSE,warning=FALSE, results="hide"}
+library(data.table)
+
+nyc311nodups_1 <- nyc311nodups %>% 
+                      select(Unique.Key, 
+                             Created.Date, 
+                             Closed.Date, 
+                             Agency, 
+                             Complaint.Type, 
+                             Incident.Zip, 
+                             Borough, 
+                             Status, 
+                             Closeout.Date, 
+                             Latitude, 
+                             Longitude)
+
+#Cleaning up wrong Date formats type in without the AM or PM notation
+nyc311nodups_2 <- nyc311nodups_1[grep("[0-9]{2}[[:punct:]][0-9]{2}[[:punct:]]
+                             [0-9]{4}[[:space:]][0-9]{2}[[:punct:]]
+                             [0-9]{2}[[:punct:]][0-9]{2}[[:punct:]][[A-Z]]",
+                             c(nyc311nodups_1$Created.Date,
+                               nyc311nodups_1$Closed.Date, 
+                               nyc311nodups_1$Closeout.Date), 
+                             invert = TRUE),]
+
+#head(nyc311nodups_2, 20)
+
+landscape(knitr::kable(nyc311nodups_2[1:10, 1:11], caption = "Data Columns With Missing AM, PM Notation Dropped") %>%
+  kable_styling(latex_options = c("striped", 
+                                  "hover", 
+                                  "responsive"),
+                                   full_width = T, 
+                                   font_size = 7) %>%
+                column_spec(2,width="6in"))
+
+```
+
+
+
+
+
+```{r}
+# Remove null  & NA values
+yx <- nyc311nodups_2[!(is.na(nyc311nodups_2$Created.Date) | nyc311nodups_2$Created.Date=="" | is.na(nyc311nodups_2$Closed.Date) | nyc311nodups_2$Closed.Date==""|is.na(nyc311nodups_2$Closeout.Date) | nyc311nodups_2$Closeout.Date==""),] 
+```
+
+
+
+Number of Rows and Range of Dates After Removing NAs     
+
+```{r}
+#Range of Dates MinMax in Dataset
+range(yx$Created.Date, na.rm = TRUE)
+range(yx$Closed.Date, na.rm = TRUE)
+range(yx$Closeout.Date, na.rm = TRUE)
+```
+ 
+  > Observation: There are erroneous dates such as "01/01/1900 12:00:00 AM" that need to be removed.
+
+  
+  
+*Selecting Date Range to avoid outliers*
+
+```{r}
+
+a1 <- yx[Created.Date >= "01/01/2010" & Created.Date <= "12/31/2014"]
+
+#head(a1)
+```
+  
+
+
+**Step 3 & 4: Converting String format into Date format using as.POSIXct if neccessarry and Date Filter**
+
+
+This will be done inside the code as we plot the trends with filters as follows:
+  1. "!is.na" To remove NAs
+  2. Using "as.POSIXct" or "mdy:HMS" methods from the Lubridate function to convert dates into workable formats
+  3. Select Date range with "scale_x_date" method from the Scales R package
+  
+
+```{r eval=FALSE}
+class(a1$Created.Date)
+```
+
+
+
+*Parse strings and Convert to Date and Time*
+
+```{r}
+new_NYC311_Data <- a1
+
+new_NYC311_Data$Created.Date <- as.POSIXct(strptime(a1$Created.Date,format = "%m/%d/%Y %H:%M:%S %p"), "America/New_York")
+new_NYC311_Data$Closed.Date <- as.POSIXct(strptime(a1$Closed.Date,format = "%m/%d/%Y %H:%M:%S %p"), "America/New_York")
+new_NYC311_Data$Closeout.Date <- as.POSIXct(strptime(a1$Closeout.Date,format = "%m/%d/%Y %H:%M:%S %p"), "America/New_York")
+
+```
+
+```{r results="hide"}
+class(new_NYC311_Data$Created.Date)
+class(new_NYC311_Data$Closed.Date)
+class(new_NYC311_Data$Closeout.Date)
+```
+
+
+Cleaned Date Formats after formating
+
+```{r}
+#head(!is.na(new_NYC311_Data$Created.Date))
+#head(new_NYC311_Data$Created.Date)
+
+```
+
+```{r}
+#head(new_NYC311_Data)
+
+knitr::kable(head(new_NYC311_Data)) %>%
+  kable_styling(latex_options = c("striped", 
+                                  "hover", 
+                                  "responsive"),
+                                   full_width = T, 
+                                   font_size = 7)
+```
+  
+  
+
+
+  
+
+### 3.2 The NYC Department of Buildings Dataset
+
+
+**i. Introducing The New York City Department of Building Dataset**
+
+This is repository of complaints received by Department of Buildings (DOB). It includes complaints that come from 311 or that are entered into the system by DOB staff.
+
+
+The dataset dimensions is as follows: 
+          Rows       2.53M
+          Columns    15
+
+
+This dataset covers all the five boroughs of NewYork City and a record of complaints related to buildings classified into coded categories. This complaint Categories codes can be found at
+
+[Complaints Category](http://www1.nyc.gov/assets/buildings/pdf/bis_complaint_disposition_codes.pdf)
+
+
+The pdf table file was converted to a csv file format and loaded for use.
+
+
+
+**ii. Data Wrangling Process For Dataset 2**
+
+The following steps are used in the process of data discovery and data cleaning for the new dataset as well.
+  
+  i.  Loading New Dataset
+  ii. Loading New Dataset
+  iii.Data Discovery - checking summaries and counts
+  iv. Removing duplicates
+  v.  Data Cleaning
+  
+
+
+**iii. Loading The New NYC Department of Building Dataset**
+
+```{r DoB_raw_data1, message=FALSE}
+
+if (!require(data.table)) {
+  install.packages("data.table",dependencies=TRUE)
+  library(data.table)
+}
+
+nycDoB<-fread("DoB_NYC_sample.csv", stringsAsFactors = FALSE)
+names(nycDoB)<-names(nycDoB) %>%
+  stringr::str_replace_all("\\s", ".")
+```
+
+
+Initially we load "DoB_NYC_sample.csv" file for testing purposes then later we revert to the full "DoB_NYC.csv" dataset for complete analysis.
+
+
+
+**iv. Cleaning & Exploratory Data Analysis** 
+
+
+
+The Department of Housing and Preservation Dataset has  
+
+Column Names for the DoB dataset
+```{r columns_in_DoB}
+colnames(nycDoB)
+```
+
+
+*Checking for Total Number of rows in our dataset*
+```{r}
+ncol(nycDoB)
+```
+
+
+
+The NYC DoB Sample dataset showing the first few rows.
+
+```{r}
+library(devtools)
+library(pander)
+
+#pander(head(nycDoB))
+
+landscape(knitr::kable(head(nycDoB), caption = "Second Dataset: NYC Department of Building Complaints") %>%
+  kable_styling(latex_options = c("striped", 
+                                  "hover", 
+                                  "responsive"),
+                                   full_width = T, 
+                                   font_size = 7) %>%
+                column_spec(2,width="6in"))
+
+```
+
+
+
+*Checking for duplicates*
+```{r message=FALSE,warning=FALSE}
+#Checking for how many unique values there are for each column
+sapply(nycDoB,function(x) length(unique(x)))
+
+```   
+  
+  
+  
+*Removing Columns with no data using various methods as outlined below:*
+    
+  - The DOBRunDate Column shall be removed
+  - All Duplicate rows removed after data inspection
+  - NAs for Created Date are removed too
+
+```{r DoB_data_cleaning, message=FALSE,warning=FALSE}
+
+nycDoB_data<- nycDoB
+DoB_data1 <-within(nycDoB_data, rm(V1, 
+                           DOBRunDate 
+                           ))
+
+rm(nycDoB_data, nycDoB)
+
+```
+
+
+  
+  
+*Checking For Duplicate Rows "AFTER" dropping the "Unique.Key" ID using DISTINCT Keyword*
+
+
+*Note:* There are very few duplicate rows when inspected with the "Unique.Key" column, but after dropping the Unique.Key column, we now realized we had over a million duplicates.We shall therefore based our analysis from hence on the "nyc311nodups" column.
+
+
+```{r DoB_no_dups3, results="hide"}
+if (!require(dplyr)) {
+install.packages("dplyr",dependencies=TRUE)
+library(dplyr)
+}
+nycDoBnodups<-distinct(DoB_data1)
+all_equal(nycDoBnodups,DoB_data1)
+
+nrow(DoB_data1)
+nrow(nycDoBnodups)
+
+
+rm(DoB_data1)
+
+```
+
+
+```{r DoB_na-checks2, message=FALSE,warning=FALSE, results="hide"}
+#Checking and Removing Rows with high number of NAs
+sum(!is.na(nycDoBnodups$Created.Date))
+```
+
+
+```{r DoB_total_NAs, message=FALSE,warning=FALSE, eval=FALSE}
+colSums(is.na(nycDoBnodups))
+```  
+  
+  
+  
+  
+**v. Creating Borough Column by Splitting Complaint Number**
+
+
+The Complaint number format is given as a seven digit number starting with "1000001 ... 1000017" all the way to the last item at 2.5 million. The first digit stands for the Borough code: (1= Manhattan, 2= Bronx, 3 = Brooklyn, 4 = Queens, 5 = Staten Island)
+
+We can therefore do a split of the Complaint Number column and create a Boroughs Column. This is given in the following steps:
+
+
+*Splitting Complaint Number To Extract Borough digit*
+
+```{r results="hide"}
+if (!require(reshape)) {
+  install.packages("reshape",dependencies=TRUE)
+  library(reshape)
+}
+
+if (!require(qdap)) {
+  install.packages("qdap",dependencies=TRUE)
+  library(qdap)
+}
+library(rJava)
+library(reshape)
+
+x <- colSplit(nycDoBnodups$Complaint.Number, col.sep="")
+
+newDoB_Add <- data.frame(ID1=x[, 1], ID2=paste2(x[, 2:7], sep=""), 
+                         nycDoBnodups[, -1])
+
+#head(newDoB_Add)
+landscape(knitr::kable(head(newDoB_Add), caption = "NYC Department of Building Complaints Dataset") %>%
+  kable_styling(latex_options = c("striped", 
+                                  "hover", 
+                                  "responsive"),
+                                   full_width = T, 
+                                   font_size = 7) %>%
+                column_spec(2,width="6in"))
+
+#rm(x)
+```
+
+Checking Categorical Levels representing the Boroughs
+
+```{r eval=FALSE}
+levels(newDoB_Add$ID1)
+```
+
+```{r}
+# We can now rename the levels 
+levels(newDoB_Add$ID1) <- c('Manhattan', 'Bronx', 'Brooklyn', 'Queens', 'Staten Island')
+
+# And check the new levels
+levels(newDoB_Add$ID1)
+```
+
+
+*Changing names of Variables ID1 & ID2 to Boroughs and Complain.NewNumber*
+
+```{r results="hide"}
+colnames(newDoB_Add)[colnames(newDoB_Add) == 'ID1'] <- 'Borough'
+colnames(newDoB_Add)[colnames(newDoB_Add) == 'ID2'] <- 'Complaint.NewNumber'
+
+#pander(head(newDoB_Add))
+landscape(knitr::kable(head(newDoB_Add), caption = "Changing Colnames of DoB Dataset") %>%
+  kable_styling(latex_options = c("striped",
+                                  "hover",
+                                  "responsive"),
+                                   full_width = T,
+                                   font_size = 7) %>%
+                column_spec(2,width="6in"))
+```
+
+
+
+
+**vi. Formating and Cleaning Dates**
+
+
+```{r DoB_period_range, message=FALSE,warning=FALSE, results="hide"}
+
+#Range of Dates MinMax in Dataset
+range(newDoB_Add$Date.Entered, na.rm = TRUE)
+
+#Range of Dates MinMax in Dataset
+range(newDoB_Add$Disposition.Date, na.rm = TRUE)
+
+#Range of Dates MinMax in Dataset
+range(newDoB_Add$Inspection.Date, na.rm = TRUE)
+```
+
+  > **NOTE:** We are having dates starting 01/01/2004 to 12/31/2017, at the same time there are dates not entered in some rows. 
+  
+  
+
+```{r results="hide"}
+myDoBwDates <- newDoB_Add
+
+myDoBwDates$Date.Entered <- as.Date(strptime(newDoB_Add$Date.Entered,format = "%m/%d/%Y"), "America/New_York")
+myDoBwDates$Disposition.Date <- as.Date(strptime(newDoB_Add$Disposition.Date,format = "%m/%d/%Y"), "America/New_York")
+
+#head(myDoBwDates)
+
+landscape(knitr::kable(head(myDoBwDates), caption = "DoB Data After Cleaning Dates") %>%
+  kable_styling(latex_options = c("striped", 
+                                  "hover", 
+                                  "responsive"),
+                                   full_width = T, 
+                                   font_size = 7) %>%
+                column_spec(2,width="6in"))
+
+rm(newDoB_Add)
+```
+
+
+
+
+
+## 4. Joined Dataset
+
+
+### 4.1 Other Support Datasets
+
+
+  1. Using the ZipCode dataset to replace matching Borough values.
+
+  2. Using The DoB Complaints Categories Dataset
+
+  3. NYC Population Data
+
+
+
+
+### 4.2 Joining of DoB together with Complaint Categories Classification Data
+
+
+
+**i. Improving Second DoB Dataset** 
+
+
+```{r DoB_raw_data3, message=FALSE}
+
+if (!require(data.table)) {
+  install.packages("data.table",dependencies=TRUE)
+  library(data.table)
+}
+
+categories_DoB<-fread("DOBComplaints_code_category_list.csv", header = TRUE, stringsAsFactors = FALSE)
+names(categories_DoB)<-names(categories_DoB) %>%
+  stringr::str_replace_all("\\s", ".")
+```
+
+
+*Cleaning up Complaints Category Description column*
+
+The Category Description values are originally separated with a dash (-) which is loaded as "number code". We replace this with a "full colon space" instead for readability.
+
+```{r}
+categories_DoB$Category.Description <- gsub("\x96", ":-", categories_DoB$Category.Description)
+head(categories_DoB)
+```
+
+  
+  **First Join: Joining The DoB Datasets with Above Categories Data to enable Priority Classification**
+
+```{r}
+#library(plyr)
+myDoBwDates$Borough = toupper(myDoBwDates$Borough)
+
+DoB_CategAdded <- join(myDoBwDates, categories_DoB,
+     type = "inner")
+
+#head(DoB_CategAdded)
+landscape(knitr::kable(head(DoB_CategAdded), caption = "First Join: Enriching DoB by Adding Categories Dataset") %>%
+  kable_styling(latex_options = c("striped", 
+                                  "hover", 
+                                  "responsive"),
+                                   full_width = T, 
+                                   font_size = 7) %>%
+                column_spec(2,width="6in"))
+```
+
+```{r eval=FALSE}
+nrow(DoB_CategAdded)
+```
+
+```{r}
+DoB_Totals <- DoB_CategAdded %>%
+    dplyr::group_by(Borough) %>%
+    filter(!is.na(Borough)) %>%
+    dplyr::summarise(Count = dplyr::n()) %>%
+    ungroup() %>%
+    mutate(Borough = reorder(Borough,Count)) %>%
+    arrange(desc(Count)) 
+  
+
+head(DoB_Totals)
+```
+
+
+
+
+### 4.3 Joining of DoB together with Main NYC311 Dataset
+
+
+
+**The NYC311 Cleaned Dataset**
+
+```{r results="hide"}
+head(new_NYC311_Data)
+```
+
+**Creating a Dataset with HPD Values Only**
+
+
+```{r results="hide"}
+# Remove null  & NA values
+            
+df1_HPD_Only <- new_NYC311_Data[!is.na(new_NYC311_Data$Agency) & new_NYC311_Data$Agency !="" &new_NYC311_Data$Agency=="HPD"]              
+
+head(df1_HPD_Only)
+#nrow(df1_HPD_Only)
+```
+
+
+**Creating Aggregates By Boroughs for NYC311 Cleaned Data**
+
+```{r}
+HPD <- df1_HPD_Only %>%
+    dplyr::group_by(Borough) %>%
+    filter(!is.na(Borough)) %>%
+    dplyr::summarise(Count = dplyr::n()) %>%
+    ungroup() %>%
+    mutate(Borough = reorder(Borough,Count)) %>%
+    arrange(desc(Count)) 
+  
+
+plot(HPD)
+```
+
+
+**Joined Aggregated Count of all Issues raised from both systems; The NYC311 and DoB Inspections**
+
+```{r}
+#Joining Datasets by Left_Join
+DoB_Merged <- merge(x = HPD, y = DoB_Totals, by = "Borough", all.y=TRUE)
+
+head(DoB_Merged)
+
+```
+
+  >Observation Brooklyn is leading on building complaints raised through the NYC311 service. Queens seems to have the least number of complaints raised on buildings but also has the highest issues raised and closed through inspections.
+  
+
+```{r}
+plot(DoB_Merged)
+```
+
+
+
+
+
+### 4.4 Joining of NYC311, DoB together with Population Data
+
+
+**Third Join: Load Population Data and Joining Categories Data to Department of Building Dataset**
+
+```{r pop_raw_data, message=FALSE}
+
+if (!require(data.table)) {
+  install.packages("data.table",dependencies=TRUE)
+  library(data.table)
+}
+
+pop_Data<-fread("NYC_Population_2010_2014.csv", header = TRUE, stringsAsFactors = FALSE)
+names(pop_Data)<-names(pop_Data) %>%
+  stringr::str_replace_all("\\s", ".")
+```
+
+```{r}
+colnames(pop_Data)[colnames(pop_Data) == 'Geography'] <- 'Borough' 
+
+pop_Data$Borough = toupper(pop_Data$Borough)
+
+#head(pop_Data)
+```
+
+
+```{r}
+# Filtering Year Column
+    
+pop_2014 <- pop_Data[pop_Data$Year==2014]              
+head(pop_2014)
+#nrow(pop_2014)
+```
+
+
+# Joining NYC311 Data to NYC Population Data
+
+
+```{r}
+#library(plyr)
+
+HPD_Pop2014 <- join(df1_HPD_Only, pop_2014,
+     type = "inner")
+
+#head(HPD_Pop2014)
+```
+
+
+
+
+
+## 5. Findings
+
+
+
+### 5.1 Summary
+
+
+
+    - The number of complaints per Person for the period 2010 to 2014 has remained largely at 1 complaint per Person across all five Boroughs which can suggest that atleast all Boroughs are in fairly the same social and infrastructure conditions.
+    
+    - Complaints on Buildings top the list and especially heating. This is more pronounced in during the months related to winter but we can also not stop asking if the age of buildings are a contributor. NewYork City being built over the past centuries may not have taken advantage of modern technologies to manage heating and as a result, the situation becoming difficult to manage now. Until we analyse more data, we cannot for sure say this is the case.
+    
+    - When we looked at the Second Dataset, Issues picked by NYC311 Staff and inspections carried out, most of those issues bordered on safety and regulatory matters. None of which noticeably were not identified by residents. Could there be a lack of awareness on safety issues that would risk the lives of residents but which they are not trained to see? This is an issue we are interested in pursuing further.
+
+
+
+
+### 5.2 Findings for The NYC311 Dataset
+
+
+**The General Overview**
+
+  - *Most repeating complaints are sorted by frequency and count.*
+
+```{r complaints,message=FALSE,warning=FALSE, fig.height=10}
+
+new_NYC311_Data %>%
+      group_by(Complaint.Type) %>%
+      summarise(Count = n()) %>%
+      ungroup() %>%
+      mutate(Complaint.Type = reorder(Complaint.Type,Count)) %>%
+      arrange(desc(Count)) %>%
+      head(50) %>%
+  
+      ggplot(aes(x = Complaint.Type,y = Count)) +
+      geom_bar(stat='identity',colour="white", fill = fillColor1) +
+      geom_text(aes(x = Complaint.Type, y = 1, 
+                label = paste0("(",Count,")",
+                               sep="")),
+            hjust=-0.5, vjust=.5, size = 3, colour = 'black',
+            fontface = 'bold') +
+      labs(x = 'Complaint', 
+           y = 'Count', 
+           title = 'Number of Complaints By Type in NYC311 Dataset') +
+      coord_flip() + 
+      theme_bw()
+
+```
+
+>Question: Which type of problems affects the people of NewYork City the most?
+
+>Answer: Heating is the leading complaint of NY City residents.
+
+
+
+  - *Call Distribution by Boroughs*
+
+```{r,message=FALSE,warning=FALSE}
+
+new_NYC311_Data %>%
+    group_by(Borough) %>%
+    filter(!is.na(Borough)) %>%
+    summarise(Count = n()) %>%
+    ungroup() %>%
+    mutate(Borough = reorder(Borough,Count)) %>%
+    arrange(desc(Count)) %>%
+    head(10) %>%
+  
+    ggplot(aes(x = Borough,y = Count)) +
+    geom_bar(stat='identity',
+             colour="white", 
+             fill = fillColor2) +
+    geom_text(aes(x = Borough, 
+                  y = 1, 
+                  label = paste0("(",Count,")",
+                                 sep="")),
+            hjust=0.5, vjust=-2.5, size = 4, colour = 'black',
+            fontface = 'bold') +
+  labs(x = 'Borough', 
+       y = 'Count', 
+       title = 'Number of Complaints By Borough') +
+  theme_bw()
+
+```
+
+
+Population Distribution
+
+
+```{r}
+#plot(pop_2014)
+# Plot the bar chart 
+barplot(pop_2014$Population,
+        names.arg=pop_2014$Borough,
+        xlab="Borough",
+        ylab="Population",
+        col="blue",
+        main="NYC Population chart",
+        border="red")
+```
+
+
+
+
+>Observation 1: Brooklyn has the highest number of complaints, but that is obvious because that population is equally high.
+
+
+
+*A Table of Questions*
+
+```{r ComplaintsVs_Person-table, echo=FALSE, message=FALSE,warning=FALSE, fig.width=12, fig.height=6}
+
+options(kableExtra.latex.load_packages = TRUE)
+library(kableExtra)
+
+col1 <- c("BROOKLYN", "QUEENS", "MANHATTAN", "BRONX", "STATEN_ISLAND")
+
+col2 <- c(2602680, 2300148, 1630948, 1431538, 472075)
+
+col3  <-c(2814008, 2036808, 1836546, 1739814, 458878)
+
+col4  <-c(1.081, 0.886, 1.130, 1.220, 0.972)
+
+col1_name <- "Borough"
+col2_name <- "Population"
+col3_name <- "Number of Complaints"
+col4_name <- "Ratio of Complaints Per Person"
+
+df_PopRatio <- data.frame(col1,col2,col3,col4)
+names(df_PopRatio) <- c(col1_name,col2_name,col3_name,col4_name)
+
+knitr::kable(df_PopRatio) %>%
+  kable_styling(latex_options = c("striped",
+                                  "hover",
+                                  "responsive"),
+                                   full_width = T,
+                                   font_size = 11)
+
+```
+
+
+
+>Observation 2: Across Populations, The ratio of complaints per person is more or less the same at about one complaint per person for the period 2010 to 2014
+
+
+
+
+  - *A Sample Distribution Mapped to the NYC Geographical Area*
+  
+
+```{r}
+#Loading Packages for Map Installation
+
+#library(osmdata)
+#library(sf)
+#library(ggmap)
+```  
+
+
+
+**Select Data From The Main NYC311 Dataset**
+
+### The head of the table
+Here we produce a table of just some relevant columns of data.
+
+```{r tabulate, results="hide", message=FALSE,warning=FALSE}
+#Selecting Columns we only need
+library(purrr) #To provide function "discard
+
+#A Function to Remove all NAs and NULL values
+is_na_or_null <- function(x){
+                      is.na(x) || is.null(x)
+}
+
+options(xtable.comment=FALSE)
+options(xtable.booktabs=TRUE)
+narrow<-new_NYC311_Data %>%
+  select(Agency,
+	       Complaint.Type,
+	       Created.Date,
+         Incident.Zip,
+	       Borough,
+         Latitude,
+         Longitude)
+
+# Taking first 1000 observations
+nyc_newdata <- narrow[1:5000,] 
+
+#final[complete.cases(final[ , 5:6]),]
+nyc_newdata[complete.cases(nyc_newdata[ , 6:7]),]
+
+```
+
+
+
+
+
+**Map Showing Distribution of Calls Across Region**
+
+
+
+```{r}
+# Get NYC map in Black and White
+if(!require("devtools")) {
+install.packages("devtools")
+}
+if(!require("ggmap")) {
+devtools::install_github("dkahle/ggmap", ref = "tidyup")
+}
+
+#center_lon = nyc_newdata(nyc_newdata$Longitude,na.rm = TRUE)
+#center_lat = nyc_newdata(nyc_newdata$Latitude,na.rm = TRUE)
+
+key<-"AIzaSyAjSCCygly1ciZo5WqV9irn28vmICQ0C-s"
+register_google(key = key)
+
+nyc_map = get_map(location = c(lon= -73.95, lat= 40.7),
+maptype = "terrain", zoom =12)
+# There is a new update regarding google maps requirement
+# for API key hence this code above is required.
+map <- ggmap(nyc_map) +
+geom_point(data=nyc_newdata,aes(x=nyc_newdata$Longitude,y=nyc_newdata$Latitude),
+           size= 0.4, alpha=0.2, color= "red") +
+ggtitle("Map of NewYork City NYC311 Complaints") +
+theme(plot.title = element_text(hjust = 0.5)) +
+xlab("Longitude") + ylab("Latitude")
+map
+```
+
+
+
+```{r map-2}
+#Map Visualization Using Leaflet
+# if(!require("leaflet"){
+# install.packages("leaflet")
+# library(leaflet)
+# })
+  
+#Range of Dates MinMax in Dataset
+#range(nyc_newdata$Latitude, na.rm = TRUE)
+#range(nyc_newdata$Longitude, na.rm = TRUE)
+
+# nyc_newdata1 <- nyc_newdata[complete.cases(nyc_newdata[ , 6:7]),]
+# 
+# nycIcon <- makeIcon(
+#     iconUrl = "iconfinder_map-marker_299087.png",
+#     iconWidth = 10*215/230, iconHeight = 10,
+#     iconAnchorX = 10*215/230/2, iconAnchorY = 16
+#   )
+# 
+# nycCallsData <- data.frame(
+#     lat = unlist(nyc_newdata1$Latitude),
+#     lng = unlist(nyc_newdata1$Longitude))
+# 
+# nycCallsData %>%
+#     leaflet() %>%
+#     addTiles() %>%
+#     addMarkers(icon = nycIcon, popup = nycCallsData) %>%
+#     addRectangles(lat1 = 40.47, lng1 = -74.26, lat2 = 40.91, lng2 = -73.64)
+```
+
+
+
+
+
+  - *Ten Most Busy Departments New York 311 Service - for the period 2010 - 2014*
+
+Next is a look at which agency receives the most complaints.
+
+  - Checking the number of calls received per Agency.
+
+```{r include = TRUE, message=FALSE,warning=FALSE}
+
+head(new_NYC311_Data[,.N,by=Agency][order(-N)], 10)
+
+```
+
+    
+
+>Observation: The HPD ( Department of Housing, Preservation and Development) has the highest number of complaints followed by DOT (Department of Transport) with NewYork Police Deaprtment being in third position.
+
+
+  - *Plotting the data for 10 Most Busy Departments*
+
+```{r,message=FALSE,warning=FALSE}
+
+new_NYC311_Data %>%
+  group_by(Agency) %>%
+  filter(!is.na(Agency)) %>%
+  summarise(Count = n()) %>%
+  ungroup() %>%
+  mutate(Agency = reorder(Agency,Count)) %>%
+  arrange(desc(Count)) %>%
+  head(10) %>%
+  
+  ggplot(aes(x = Agency,y = Count)) +
+  geom_bar(stat='identity',
+           colour="white", 
+           fill = fillColor3) +
+  geom_text(aes(x = Agency, 
+                y = 1, label = paste0("(",Count,")",
+                                      sep="")),
+            hjust=0, vjust=.5, size = 4, colour = 'black',
+            fontface = 'bold') +
+  labs(x = 'Resolving Department', 
+       y = 'Count', 
+       title = 'NYC311: Distribution of Complaints by Department Handling') +
+  coord_flip() + 
+  theme_bw()
+
+```
+
+
+
+
+
+**Narrowing Data by Filtering Queens Only Column**
+
+```{r results="hide"}
+# Remove null  & NA values
+    
+df1_HPD_Queens_Only <- new_NYC311_Data[!is.na(new_NYC311_Data$Agency) & new_NYC311_Data$Agency !="" &new_NYC311_Data$Agency=="HPD" &new_NYC311_Data$Borough=="QUEENS"]              
+
+head(df1_HPD_Queens_Only)
+#nrow(df1_HPD_Queens_Only)
+```
+
+
+
+Issues handled through Deapartment of Housing Preservation and Development section
+
+```{r complaints_2,message=FALSE,warning=FALSE, fig.height=12}
+
+df1_HPD_Only %>%
+      group_by(Complaint.Type) %>%
+      summarise(Count = n()) %>%
+      ungroup() %>%
+      mutate(Complaint.Type = reorder(Complaint.Type,Count)) %>%
+      arrange(desc(Count)) %>%
+      head(50) %>%
+  
+      ggplot(aes(x = Complaint.Type,y = Count)) +
+      geom_bar(stat='identity',colour="white", fill = fillColor1) +
+      geom_text(aes(x = Complaint.Type, y = 1, 
+                label = paste0("(",Count,")",
+                               sep="")),
+            hjust=-0.5, vjust=.5, size = 3, colour = 'black',
+            fontface = 'bold') +
+      labs(x = 'Complaint', 
+           y = 'Count', 
+           title = 'NYC311_HPD: Number of Complaints By Type') +
+      coord_flip() + 
+      theme_bw()
+
+```
+
+
+
+
+
+### 5.3 Findings for The DoB Dataset
+
+**More Cross Tabulations Interrogating DOB Dataset**
+
+```{r}
+# Load function
+source("http://pcwww.liv.ac.uk/~william/R/crosstab.r")
+```
+
+
+*Summaries of Inspections Carried out in Boroughs by Priority*
+
+```{r}
+data(DoB_CategAdded)
+
+# Frequency count
+crosstab(DoB_CategAdded, row.vars = "Borough", col.vars = "Priority", type = "f")
+
+```
+
+*Totals By Priority*
+
+```{r}
+crosstab(DoB_CategAdded, row.vars = "Priority")
+```
+
+*Totals by Boroughs*
+
+```{r}
+crosstab(DoB_CategAdded, row.vars = "Borough")
+```
+
+*A Breakdown By Boroughs and Priority*
+
+```{r}
+crosstab(DoB_CategAdded, row.vars = c("Borough", "Priority"))
+```
+
+
+The DoB Dataset Count by Borough
+
+```{r,message=FALSE,warning=FALSE}
+
+DoB_CategAdded %>%
+    group_by(Borough) %>%
+    filter(!is.na(Borough)) %>%
+    summarise(Count = n()) %>%
+    ungroup() %>%
+    mutate(Borough = reorder(Borough,Count)) %>%
+    arrange(desc(Count)) %>%
+    head(10) %>%
+  
+    ggplot(aes(x = Borough,y = Count)) +
+    geom_bar(stat='identity',
+             colour="white", 
+             fill = fillColor2) +
+    geom_text(aes(x = Borough, 
+                  y = 1, 
+                  label = paste0("(",Count,")",
+                                 sep="")),
+            hjust=0.5, vjust=-2.5, size = 4, colour = 'black',
+            fontface = 'bold') +
+  labs(x = 'Borough', 
+       y = 'Count', 
+       title = 'Number of Complaints By Borough') +
+  theme_bw()
+
+```
+
+
+## 6. Conclusions
+
+
+*Summary of Steps Taken in Data Discovery*
+
+The NYC311 dataset had more than 9 million records and 52 dimensions while the second dataset had 2.5 million records and 15 columns.
+
+Both datasets were analysed following a systematic approach. This enabled us understand the service offered as well as the data generated during the transactions. We described the data, its structure and quality of the values stored in it using R functions
+
+
+*Findings From Data Inspection & Cleaning*
+
+
+After cleaning and structuring both datasets, analysis were done on each separate dataset and finally the joined and improved dataset was analysed too. 
+
+
+
+The findings were as follows:
+
+  1. There were substantial number of outliers on dates columns which were cleaned. Second, the Boroughs Column has many Unspecified values which we have tried reducing.
+  
+  2. Issues related to building infrastructure and related utilities dominate the majority share of complaints from residents.
+  
+  3. In comparison to inspections initiated by NYC staff Deapartment of Buildings, the issues raised and followed up by NYC311 staff were of regulatory and safety in nature, while those raised by residents leaned more on inconviniences and disturbances.
+  
+
+
+We have conducted a high-level exploration of the data including agencies with most complaints, Boroughs with most complaints and drilldown of resolution duration by Boroughs. To achieve that, we used some common visualizations like Bar Chart, and Crosstabulation.  
+
+
+A dictionary structure of NYC 311 dataset is given at the end of this report in the Appendices.
+
+
+
+*Final Report Compilation*
+
+  - Further Cleaning of Datasets in preparation for joining like changing Boroughs column from lowercase to upper
+  - Performed two joins
+   - First Join done on Department of Housing Dataset with List data of categories of Complaints with priorities included.
+   - Second Join to Main Data set NYC311
+   
+  - Joined Data on Cummulative count on issues raised on both datasets
+
+
+
+Further comparison and analysis conducted after joining datasets in relation to the following;
+
+  - More informative plots to identify closure gaps
+  - A look into type of Complaints raised by residents comparing them to issues from inspections and determining whether the inspections address what is highest concern for residents.
+  - We also look into how aware are residents about safety aspects of buildings through complaints raised.
+
+
+
+
+
+## 7. Appendix
+
+### 7.1 The Data Dictionary
+
+**1. The Static data dictionary is describing the NYC311 dataset details.**
+
+```{r dict-table1, echo=FALSE, message=FALSE,warning=FALSE, fig.width=12, fig.height=6}
+
+# Not evaluated. Ilustration purpose
+options(kableExtra.latex.load_packages = TRUE)
+library(kableExtra)
+
+a <- c("Complaint.Number","Status","Date.Entered", "House.Number","ZIP.Code", "House.Street","BIN", "Community.Board", "Special.District", "Complaint.Category", "Unit", "Disposition.Date", "Disposition.Code", "Inspection.Date" )
+
+b <- c("Integer",
+       "Character",
+       "Date",
+       "Integer",
+       "Integer", 
+       "Character",
+       "Character", 
+       "Integer", 
+       "Character", 
+       "Character", 
+       "Integer", 
+       "Date",
+       "Character",
+       "Date")
+
+c <- c("int","char","date", "int", "int", "char", "char", "int","char", "char", "Int", "Date", "Char", "Date")
+
+d  <-c("Complaint number starting with borough code: (1= Manhattan, 2= Bronx, 3 = Brooklyn, 4 = Queens, 5 = Staten Island)", 
+       "Status of Complaint", 
+       "Date Complaint was Entered",
+       "House Number of Complaint", 
+       "Zip code of complaint",
+       "House Street of Complaint",
+       "Number assigned by City Planning to a specific building", 
+       "3-digit identifier: Borough code = first position, last 2 = community board",
+       "Is Complaint in Special District", 
+       "DOB Complaint Category Codes (01-Accident Construction/Plumbing, etc.)", 
+       "Unit dispositioning Complaint", 
+       "Date Complaint was Dispositioned", 
+       "Disposition Code of Complaint (A1-Building Violations Served, L1-Partial Stop Work Order,etc.)", 
+       "Inspection Date of Complaint")
+
+
+e <- c("1000007", "CLOSED", "date as '08-24-2012'", "410 or 159-03", "Zipcode as 10018","WEST 36 STREET","BIN as 3397601","63, 104, 105...", "Character as 45, 1A...", "Complaint category number as 10, 21, 1A...",  "Unit as MAN,BKLYN, QNS...", "Date as 02/06/2017", "L2, A8...", "Inspection Dates as 05/19/2016")
+
+a_name <- "Field-Name"
+b_name <- "Data-Type"
+c_name <- "Field-Size"
+d_name <- "Description"
+e_name <- "Example"
+
+df_DoB <- data.frame(a,b,c,d,e)
+names(df_DoB) <- c(a_name,b_name,c_name,d_name,e_name)
+
+knitr::kable(df_DoB) %>%
+  kable_styling(latex_options = c("striped", 
+                                  "hover", 
+                                  "responsive"),
+                                   full_width = T, 
+                                   font_size = 7)
+```
+
+
+
+The data dictionary above represents the characteristics of the data included and will influence the type of data transformation required for analysis.
+
+
+
+
+
+### 7.2 Questions To Answer
+
+
+*A Table of Questions*
+
+```{r Question-table, echo=FALSE, message=FALSE,warning=FALSE, fig.width=12, fig.height=6}
+
+# Not evaluated. Ilustration purpose
+options(kableExtra.latex.load_packages = TRUE)
+library(kableExtra)
+
+col1 <- c("What are the Statistics in regard to NYC311 dataset?",
+       "What is the seasonality/ trends of the complaints over time, and which type of complaint?",
+       "How do the agencies fare in dealing with complaints? Are there signs of being overwhelmed? If yes at what times?",
+       "What is the average time it takes to handle each category of task?",
+       "How could these data be made useful and benefit the agencies in improving their performance?")
+
+col2 <- c("To understand the impact of the service and extent of scope",
+       "To understand trends, peaks. Useful for planning purposes",
+       "Can be helpful in proper resourcing and support, reorganization",
+       "Measures effectiveness and can be used to identify bottlenecks",
+       "For brainstorming on generating business insights and taking advantage of innovation")
+
+col3  <-c("Tables, Bar Charts and summaries", 
+       "Bar graphs, Time Series Charts", 
+       "Bar graphs, Time Series Charts",
+       "A Table Summary", 
+       "A brainstorming tree")
+
+col1_name <- "Question/Hypothesis"
+col2_name <- "Objective"
+col3_name <- "Visualization"
+
+df_Quest <- data.frame(col1,col2,col3)
+names(df_Quest) <- c(col1_name,col2_name,col3_name)
+
+knitr::kable(df_Quest) %>%
+  kable_styling(latex_options = c("striped",
+                                  "hover",
+                                  "responsive"),
+                                   full_width = T,
+                                   font_size = 11)
+
+```
+
+
+**a. What types of complaints are dominant and how do they vary from region to region?** 
+
+
+  - *Most occuring complaints*  
+
+Most repeating complaints are sorted by frequency and count.
+
+```{r nyc311Plot_1, message=FALSE,warning=FALSE}
+
+nyc311nodups %>%
+      dplyr::group_by(Complaint.Type) %>%
+      dplyr::summarise(Count = dplyr::n()) %>%
+      ungroup() %>%
+      mutate(Complaint.Type = reorder(Complaint.Type,Count)) %>%
+      arrange(desc(Count)) %>%
+      head(10) %>%
+  
+      ggplot(aes(x = Complaint.Type,y = Count)) +
+      geom_bar(stat='identity',colour="white", fill = fillColor1) +
+      geom_text(aes(x = Complaint.Type, y = 1, 
+                label = paste0("(",Count,")",
+                               sep="")),
+            hjust=-0.5, vjust=.5, size = 4, colour = 'black',
+            fontface = 'bold') +
+      labs(x = 'Complaint', 
+           y = 'Count', 
+           title = 'Number of Complaints By Type') +
+      coord_flip() + 
+      theme_bw()
+
+```
+
+>Observation - The issues raised by residents lean more to comfort and convinience rather than those that have potential for future risks. The aspect of residents being responsible for their own safety will be explored further as we go along.
+
+
+
+**The Top 10 Non-Compliance Issues in NYC Buildings**
+
+Most repeating complaints resulting from Inspections rather than from users sorted by frequency and count.
+
+```{r DoBPlot_1, message=FALSE,warning=FALSE}
+
+myDoBwDates %>%
+      dplyr::group_by(Complaint.Category) %>%
+      dplyr::summarise(Count = dplyr::n()) %>%
+      ungroup() %>%
+      mutate(Complaint.Category = reorder(Complaint.Category,Count)) %>%
+      arrange(desc(Count)) %>%
+      head(10) %>%
+  
+      ggplot(aes(x = Complaint.Category,y = Count)) +
+      geom_bar(stat='identity',colour="white", fill = fillColor2) +
+      geom_text(aes(x = Complaint.Category, y = 1, 
+                label = paste0("(",Count,")",
+                               sep="")),
+            hjust=-0.5, vjust=.5, size = 4, colour = 'black',
+            fontface = 'bold') +
+      labs(x = 'Complaint', 
+           y = 'Count', 
+           title = 'Number of Issues Raised by DoB Staff After Inspections By Type') +
+      coord_flip() + 
+      theme_bw()
+
+```
+
+Note: On Y - Axis the Following numbers stand for categories as follows:
+
+  - 05 - Permit – None (Building/PA/Demo etc.)
+  - 45 - Illegal Conversion
+  - 63 - Elevator-Danger Condition/Shaft Open/Unguarded
+  - 73 - Failure to Maintain
+  - 31 - Certificate of Occupancy – None/Illegal/Contrary to Co
+  - 30 - Building Shaking/Vibrating/Structural Stability Affected
+  - 59 - Electrical Wiring – Defective/Exposed, In Progress
+  - 04 - After Hours Work – Illegal
+  - 83 - Construction – Contrary/Beyond Approved Plans/Permits
+  - 4B - SEP – Professional Certification Compliance Audit
+
+>Observation- Issues raised through inspections are either safety related or regulatory in nature as laid down by authorities. The question is "How much are residents aware of risks or hazards around them and if they are willing to raise those as complaints?"
+
+
+**Non-Compliance in NYC Buildings Distribution by Boroughs**
+
+```{r DoBPlot_2, message=FALSE,warning=FALSE}
+myDoBwDates %>%
+    dplyr::group_by(Borough) %>%
+    filter(!is.na(Borough)) %>%
+    dplyr::summarise(Count = dplyr::n()) %>%
+    ungroup() %>%
+    mutate(Borough = reorder(Borough,Count)) %>%
+    arrange(desc(Count)) %>%
+    head(10) %>%
+  
+    ggplot(aes(x = Borough,y = Count)) +
+    geom_bar(stat='identity',
+             colour="white", 
+             fill = fillColor3) +
+    geom_text(aes(x = Borough, 
+                  y = 1, 
+                  label = paste0("(",Count,")",
+                                 sep="")),
+            hjust=0.5, vjust=-2.5, size = 4, colour = 'black',
+            fontface = 'bold') +
+  labs(x = 'Borough', 
+       y = 'Count', 
+       title = 'Number of Non-Compliance on NYC Buildings By Borough') +
+  theme_bw()
+```
+  
+
+**Top 10 complaints from NYC311 Assigned to Agencies by count.**
+
+```{r nyc311Plot_2, message=FALSE,warning=FALSE}
+
+nyc311nodups %>%
+      dplyr::group_by(Agency) %>%
+      dplyr::summarise(Count = dplyr::n()) %>%
+      ungroup() %>%
+      mutate(Agency = reorder(Agency,Count)) %>%
+      arrange(desc(Count)) %>%
+      head(10) %>%
+  
+      ggplot(aes(x = Agency,y = Count)) +
+      geom_bar(stat='identity',colour="white", fill = fillColor1) +
+      geom_text(aes(x = Agency, y = 1, 
+                label = paste0("(",Count,")",
+                               sep="")),
+            hjust=-0.5, vjust=.5, size = 4, colour = 'black',
+            fontface = 'bold') +
+      labs(x = 'Complaint', 
+           y = 'Count', 
+           title = 'Number of Complaints By Agency') +
+      coord_flip() + 
+      theme_bw()
+
+```
+
+
+**A Breakdown of complaints Assigned to The NYC Department of Housing Preservation & Development (HPD)**
+
+```{r}
+df_HPD <- nyc311nodups
+
+complaints_HPD <- df_HPD %>% 
+  select(Agency, Complaint.Type, Borough) %>% 
+  filter(Agency == "HPD")
+head(complaints_HPD)
+```
+
+
+
+```{r nyc311Plot_3, message=FALSE,warning=FALSE}
+
+complaints_HPD %>%
+      dplyr::group_by(Complaint.Type) %>%
+      dplyr::summarise(Count = dplyr::n()) %>%
+      ungroup() %>%
+      mutate(Complaint.Type = reorder(Complaint.Type,Count)) %>%
+      arrange(desc(Count)) %>%
+      head(10) %>%
+  
+      ggplot(aes(x = Complaint.Type,y = Count)) +
+      geom_bar(stat='identity',colour="white", fill = fillColor5) +
+      geom_text(aes(x = Complaint.Type, y = 1, 
+                label = paste0("(",Count,")",
+                               sep="")),
+            hjust=-0.5, vjust=.5, size = 4, colour = 'black',
+            fontface = 'bold') +
+      labs(x = 'Complaint', 
+           y = 'Count', 
+           title = 'Breakdown of HPD Complaints By Type') +
+      coord_flip() + 
+      theme_bw()
+
+```
+
+
+
+
+### 7.3 Cross Tabulations
+
+
+Cross Tabulation For the new Dataset Department of Buildings joined with Catagories Data to show priority levels of issues.
+
+```{r}
+library(gmodels)
+
+crossTab_1 <- CrossTable(DoB_CategAdded$Borough, DoB_CategAdded$Priority, expected = TRUE)
+
+crossTab_1
+```
+
+
+
